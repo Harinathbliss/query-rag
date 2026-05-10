@@ -15,7 +15,7 @@ Resources:
       
       # API Gateway ట్రిగ్గర్ ఇక్కడ యాడ్ చేయాలి
       Events:
-        MyGetApi:
+        MyAsk:
           Type: Api
           Properties:
             Path: /ask-question 
