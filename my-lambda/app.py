@@ -3,7 +3,7 @@ from qdrant_client import QdrantClient
 import boto3
 
 client = QdrantClient(
-    host="54.145.235.24",
+    host="52.90.213.197",
     port=6333
 )
 
