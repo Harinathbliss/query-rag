@@ -1,0 +1,44 @@
+name: Query Lambda Deploy
+on:
+  push:
+    branches: [ main ] 
+
+permissions:
+  id-token: write   
+  contents: read    
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. పైథాన్ సెటప్ చేయడం చాలా ముఖ్యం
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' # మీ ల్యాంబ్డా రన్‌టైమ్ ఏదైతే అదే ఇవ్వండి
+
+      # 2. SAM CLI ని సెటప్ చేయడం
+      - name: Setup SAM
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::590184123279:role/GitHubActionDeploymentRole
+          aws-region: us-east-1
+
+      - name: Deploy with SAM
+        run: |
+          # 3. Build with container (ఇది లైబ్రరీలను కరెక్ట్ గా ప్యాక్ చేస్తుంది)
+          sam build --use-container 
+          
+          # 4. Deploy
+          sam deploy \
+            --stack-name query-lambda-stack \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset
