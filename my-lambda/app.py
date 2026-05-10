@@ -16,13 +16,21 @@ def lambda_handler(event,context):
     request_body = json.loads(event.get('body')) or {}
     user_id = request_body.get('userId')
     query = request_body.get('query')
+    body = json.dumps({
+        "texts": [query],
+        "input_type": "search_query", # సెర్చ్ కోసం కాబట్టి 'search_query'
+        "truncate": "NONE"
+    })
+    
+
     embedding_response = bedrock_runtime.invoke_model(
-            body=json.dumps({"inputText": query}),
-            modelId="amazon.titan-embed-text-v1",
+            body=body,
+            modelId="cohere.embed-english-v3",
             accept="application/json",
             contentType="application/json"
         )
-    query_vector = json.loads(embedding_response.get("body").read()).get("embedding")
+    response_json = json.loads(embedding_response.get("body").read())
+    query_vector = response_json.get("embeddings")[0]
     
     print("Query Vector",query_vector)
 
