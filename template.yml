@@ -11,7 +11,7 @@ Resources:
         - x86_64
       MemorySize: 256
       Timeout: 60
-      CodeUri: mylambda/
+      CodeUri: my-lambda/
       
       # API Gateway ట్రిగ్గర్ ఇక్కడ యాడ్ చేయాలి
       Events:
