@@ -7,7 +7,7 @@ client = QdrantClient(
     port=6333
 )
 
-collection_name = "pdf_knowledge_base"
+collection_name = "my_pdf_collection"
 bedrock_runtime = boto3.client(service_name="bedrock-runtime")
 
 
