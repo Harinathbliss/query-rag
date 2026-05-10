@@ -34,12 +34,11 @@ def lambda_handler(event,context):
     
     print("Query Vector",query_vector)
 
-    results = client.search(
-        query_vector=query_vector,
-        collection_name=collection_name,
-        limit=5,
-        
-    )
+    results = client.query_points(
+    collection_name=collection_name,
+    query=query_vector,
+    limit=5
+    ).points
 
     print("User Id",user_id)
     print("Query",query)
