@@ -19,7 +19,7 @@ Resources:
           Type: Api
           Properties:
             Path: /ask-question 
-            Method: get    
+            Method: post    
 
       Policies:
         - Statement:

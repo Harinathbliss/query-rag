@@ -7,6 +7,7 @@ def lambda_handler(event,context):
     request_body = event.get('body') or {}
     user_id = request_body.get('userId')
     query = request_body.get('query')
+    
     print("User Id",user_id)
     print("Query",query)
     
