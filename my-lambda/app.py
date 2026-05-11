@@ -37,7 +37,7 @@ def lambda_handler(event,context):
     results = client.query_points(
     collection_name=collection_name,
     query=query_vector,
-    limit=5
+    limit=2
     ).points
 
     res_collections = []
@@ -48,7 +48,7 @@ def lambda_handler(event,context):
     
     print("Res Collections",res_collections)
 
-    search_results = "\n".join([j['text'] for j in res_collections])
+    search_results = ",".join([j['text'][:1000] for j in res_collections])
     
     print("Search Results", search_results)
 
