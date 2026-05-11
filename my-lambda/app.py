@@ -48,7 +48,7 @@ def lambda_handler(event,context):
     
     print("Res Collections",res_collections)
 
-    search_results = "\n".join([j.text for j in res_collections])
+    search_results = "\n".join([j['text'] for j in res_collections])
     
     print("Search Results", search_results)
 
