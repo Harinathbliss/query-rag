@@ -43,7 +43,7 @@ def lambda_handler(event,context):
     res_collections = []
     for k in results:
         res_collections.append({
-            "text":k.payload
+            "text":k.payload.text
         })
     
     print("Res Collections",res_collections)
