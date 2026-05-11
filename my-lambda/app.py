@@ -40,13 +40,41 @@ def lambda_handler(event,context):
     limit=5
     ).points
 
+    res_collections = []
+    for k in results:
+        res_collections.append({
+            "text":k.payload
+        })
+    
+    print("Res Collections",res_collections)
+
+    search_results = "\n".join([j.text for j in res_collections])
+    
+    print("Search Results", search_results)
+
+    system_prompt = f"""You are an Agent Analyze the user query {query} based on the search results {search_results}"""
+
     print("User Id",user_id)
     print("Query",query)
-
     print("results",results)
+    
+    user_prompt = json.dumps({
+    "prompt": system_prompt,
+    "max_gen_len": 512,
+    "temperature": 0,
+    "top_p": 0.9
+    })
+    
+    response = bedrock_runtime.invoke_model(
+    modelId='meta.llama3-70b-instruct-v1:0',
+    body=user_prompt
+    )
+
+    response_body = json.loads(response.get('body').read())
+    answer = response_body.get('generation')
 
     
     return {
     "statusCode": 200,
-    "body": json.dumps(results)
+    "body": json.dumps(answer)
     }
