@@ -66,7 +66,7 @@ def lambda_handler(event,context):
     })
     
     response = bedrock_runtime.invoke_model(
-    modelId='anthropic.claude-sonnet-4-6',
+    modelId='meta.llama3-1-405b-instruct-v1:0',
     body=user_prompt
     )
 
