@@ -66,7 +66,7 @@ def lambda_handler(event,context):
     })
     
     response = bedrock_runtime.invoke_model(
-    modelId='meta.llama3-1-8b-instruct-v1:0',
+    modelId='us.meta.llama3-1-8b-instruct-v1:0',
     body=user_prompt
     )
 
