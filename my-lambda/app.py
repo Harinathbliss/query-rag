@@ -1,8 +1,11 @@
 import json
 import boto3
+from botocore.config import Config
 from qdrant_client import QdrantClient
 
+# ----------------------------
 # Qdrant setup
+# ----------------------------
 client = QdrantClient(
     host="3.82.4.15",
     port=6333
@@ -10,9 +13,17 @@ client = QdrantClient(
 
 collection_name = "my_pdf_collection"
 
-# Bedrock client
-bedrock_runtime = boto3.client(service_name="bedrock-runtime")
-
+# ----------------------------
+# Bedrock client (safer retries)
+# ----------------------------
+bedrock_runtime = boto3.client(
+    service_name="bedrock-runtime",
+    config=Config(
+        retries={
+            "max_attempts": 2
+        }
+    )
+)
 
 # ----------------------------
 # Lambda handler
@@ -28,64 +39,65 @@ def lambda_handler(event, context):
     if not query:
         return {
             "statusCode": 400,
-            "body": json.dumps("Query is required")
+            "body": json.dumps("query is required")
         }
 
     # ----------------------------
-    # 1. Get embedding
+    # 1. Embedding (Cohere)
     # ----------------------------
-    body = json.dumps({
+    embed_body = json.dumps({
         "texts": [query],
         "input_type": "search_query",
         "truncate": "END"
     })
 
     embedding_response = bedrock_runtime.invoke_model(
-        body=body,
         modelId="cohere.embed-english-v3",
+        body=embed_body,
         accept="application/json",
         contentType="application/json"
     )
 
-    response_json = json.loads(embedding_response["body"].read())
-    query_vector = response_json["embeddings"][0]
+    embedding_json = json.loads(embedding_response["body"].read())
+    query_vector = embedding_json["embeddings"][0]
 
-    print("Query Vector generated")
+    print("Embedding generated")
 
     # ----------------------------
-    # 2. Qdrant search (LIMITED)
+    # 2. Vector search (STRICT LIMIT)
     # ----------------------------
     results = client.query_points(
         collection_name=collection_name,
         query=query_vector,
-        limit=2   # keep small to avoid token overflow
+        limit=1   # IMPORTANT: keep small for big models
     ).points
 
     # ----------------------------
-    # 3. Build SAFE context (token-controlled)
+    # 3. Safe context builder (token-safe)
     # ----------------------------
-    MAX_CONTEXT_CHARS = 1200
+    MAX_CONTEXT_CHARS = 800
     search_results = ""
-    current_len = 0
 
     for r in results:
-        text = r.payload.get("text", "")[:300]
+        text = r.payload.get("text", "")
 
-        if current_len + len(text) > MAX_CONTEXT_CHARS:
+        # aggressive trim
+        text = text[:250]
+
+        if len(search_results) + len(text) > MAX_CONTEXT_CHARS:
             break
 
         search_results += text + "\n"
-        current_len += len(text)
 
-    print("Search context prepared")
+    print("Context built")
 
     # ----------------------------
-    # 4. Prompt (RAG format safe for Llama 3)
+    # 4. Prompt (clean RAG format)
     # ----------------------------
     system_prompt = f"""
-You are an AI assistant.
+You are a helpful AI assistant.
 
-Answer the question using ONLY the context below.
+Answer ONLY using the context below.
 
 User Query:
 {query}
@@ -95,32 +107,34 @@ Context:
 """
 
     # ----------------------------
-    # 5. Bedrock Llama 3 prompt format
+    # 5. BIG MODEL (Claude 3 Sonnet)
     # ----------------------------
-    user_prompt = {
-        "prompt": f"""<|begin_of_text|><|start_header_id|>user<|end_header_id|>
-
-{system_prompt}
-
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-""",
-        "max_gen_len": 256,
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 512,
         "temperature": 0.2,
-        "top_p": 0.9
+        "top_p": 0.9,
+        "messages": [
+            {
+                "role": "user",
+                "content": system_prompt
+            }
+        ]
     }
 
     # ----------------------------
-    # 6. Call Llama 3
+    # 6. Invoke Bedrock (BIG MODEL)
     # ----------------------------
     response = bedrock_runtime.invoke_model(
-        modelId="us.meta.llama3-1-8b-instruct-v1:0",
-        body=json.dumps(user_prompt),
+        modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+        body=json.dumps(body),
         contentType="application/json",
         accept="application/json"
     )
 
     response_body = json.loads(response["body"].read())
-    answer = response_body.get("generation", "")
+
+    answer = response_body["content"][0]["text"]
 
     print("Answer generated")
 
