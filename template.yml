@@ -27,23 +27,23 @@ Resources:
       Policies:
         - Statement:
 
-            # Bedrock Foundation Model Permission
+            # Bedrock Foundation Models (ALL regions)
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
                 - bedrock:InvokeModelWithResponseStream
               Resource:
-                - arn:aws:bedrock:us-east-1::foundation-model/*
+                - arn:aws:bedrock:*::foundation-model/*
 
-            # Bedrock Inference Profile Permission
+            # Bedrock Inference Profiles
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
                 - bedrock:InvokeModelWithResponseStream
               Resource:
-                - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*
+                - !Sub arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*
 
-            # CloudWatch Logs Permission
+            # CloudWatch Logs
             - Effect: Allow
               Action:
                 - logs:CreateLogGroup
