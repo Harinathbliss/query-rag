@@ -3,7 +3,7 @@ from qdrant_client import QdrantClient
 import boto3
 
 client = QdrantClient(
-    host="18.232.130.187",
+    host="3.82.4.15",
     port=6333
 )
 
@@ -59,8 +59,8 @@ def lambda_handler(event,context):
     print("results",results)
     
     user_prompt = json.dumps({
-    "prompt": system_prompt,
-    "max_gen_len": 512,
+    "prompt": f"<|begin_of_text|><|user|>{system_prompt}<|assistant|>",
+    "max_gen_len": 128,
     "temperature": 0,
     "top_p": 0.9
     })
