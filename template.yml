@@ -2,43 +2,57 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
 Resources:
-  MyPureLogicFunction: 
+  MyPureLogicFunction:
     Type: AWS::Serverless::Function
+
     Properties:
       Handler: app.lambda_handler
       Runtime: python3.12
+
       Architectures:
         - x86_64
+
       MemorySize: 256
       Timeout: 300
+
       CodeUri: my-lambda/
-      
-      # API Gateway ట్రిగ్గర్ ఇక్కడ యాడ్ చేయాలి
+
       Events:
         MyAsk:
           Type: Api
           Properties:
-            Path: /ask-question 
-            Method: post    
+            Path: /ask-question
+            Method: post
 
       Policies:
         - Statement:
-            # Bedrock Invoke పర్మిషన్
+
+            # Bedrock Foundation Model Permission
             - Effect: Allow
               Action:
-                - "bedrock:InvokeModel"
-              Resource: "arn:aws:bedrock:us-east-1::foundation-model/*"
-            
-            # Logs పర్మిషన్
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource:
+                - arn:aws:bedrock:us-east-1::foundation-model/*
+
+            # Bedrock Inference Profile Permission
             - Effect: Allow
               Action:
-                - "logs:CreateLogGroup"
-                - "logs:CreateLogStream"
-                - "logs:PutLogEvents"
-              Resource: "arn:aws:logs:*:*:*"
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource:
+                - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*
+
+            # CloudWatch Logs Permission
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource:
+                - arn:aws:logs:*:*:*
 
 Outputs:
-  # డిప్లాయ్ అయ్యాక మీ API URL ని టెర్మినల్‌లో చూడటానికి ఇది ఉపయోగపడుతుంది
   MyApiUrl:
-    Description: "API Gateway endpoint URL for Prod stage"
+    Description: API Gateway endpoint URL for Prod stage
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/ask-question/"
