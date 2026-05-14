@@ -127,7 +127,7 @@ Context:
     # 6. Invoke Bedrock (BIG MODEL)
     # ----------------------------
     response = bedrock_runtime.invoke_model(
-        modelId="us.anthropic.claude-3-haiku-20240307-v1:0",
+        modelId="us.amazon.nova-2-lite-v1:0",
         body=json.dumps(body),
         contentType="application/json",
         accept="application/json"
