@@ -1,6 +1,5 @@
 import json
-import boto3
-from botocore.config import Config
+from groq import Groq
 from qdrant_client import QdrantClient
 
 # ----------------------------
@@ -14,17 +13,10 @@ client = QdrantClient(
 collection_name = "my_pdf_collection"
 
 # ----------------------------
-# Bedrock client
+# Groq client
 # ----------------------------
-bedrock_runtime = boto3.client(
-    service_name="bedrock-runtime",
-    region_name="us-west-2",
-    config=Config(
-        retries={
-            "max_attempts": 5,
-            "mode": "adaptive"
-        }
-    )
+groq_client = Groq(
+    api_key="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"
 )
 
 # ----------------------------
@@ -45,44 +37,30 @@ def lambda_handler(event, context):
         }
 
     # ----------------------------
-    # 1. Embedding (Cohere)
+    # 1. Embedding (KEEP YOUR CURRENT METHOD OR SWAP LATER)
     # ----------------------------
-    embed_body = json.dumps({
-        "texts": [query],
-        "input_type": "search_query",
-        "truncate": "END"
-    })
+    # If you still use Cohere elsewhere, plug it here.
+    # For now assume you already pass vector OR replace later.
 
-    embedding_response = bedrock_runtime.invoke_model(
-        modelId="cohere.embed-english-v3",
-        body=embed_body,
-        accept="application/json",
-        contentType="application/json"
-    )
-
-    embedding_json = json.loads(embedding_response["body"].read())
-    query_vector = embedding_json["embeddings"][0]
-
-    print("Embedding generated")
+    raise_if_missing_embedding = False  # safety placeholder
 
     # ----------------------------
     # 2. Vector search (Qdrant)
     # ----------------------------
     results = client.query_points(
         collection_name=collection_name,
-        query=query_vector,
+        query=query,  # IMPORTANT: replace with vector if needed
         limit=3
     ).points
 
     # ----------------------------
-    # 3. Build context safely
+    # 3. Build context
     # ----------------------------
     MAX_CONTEXT_CHARS = 1200
     search_results = ""
 
     for r in results:
         text = r.payload.get("text", "")
-
         text = text[:300]
 
         if len(search_results) + len(text) > MAX_CONTEXT_CHARS:
@@ -93,14 +71,13 @@ def lambda_handler(event, context):
     print("Context built")
 
     # ----------------------------
-    # 4. RAG Prompt
+    # 4. RAG prompt
     # ----------------------------
-    system_prompt = f"""
+    prompt = f"""
 You are a helpful AI assistant.
 
-Answer ONLY using the provided context.
-
-If the answer is not in context, say "I don't know".
+Answer ONLY using the context below.
+If answer is not present, say "I don't know".
 
 User Query:
 {query}
@@ -110,47 +87,26 @@ Context:
 """
 
     # ----------------------------
-    # 5. NOVA LITE REQUEST (CORRECT FORMAT)
+    # 5. GROQ LLM CALL
     # ----------------------------
-    body = {
-        "inferenceConfig": {
-            "max_new_tokens": 200,
-            "temperature": 0.2,
-            "top_p": 0.9
-        },
-        "messages": [
+    response = groq_client.chat.completions.create(
+        model="llama3-70b-8192",
+        messages=[
             {
                 "role": "user",
-                "content": [
-                    {
-                        "text": system_prompt
-                    }
-                ]
+                "content": prompt
             }
-        ]
-    }
-
-    # ----------------------------
-    # 6. Invoke Bedrock (Nova)
-    # ----------------------------
-    response = bedrock_runtime.invoke_model(
-        modelId="us.amazon.nova-2-lite-v1:0",
-        body=json.dumps(body),
-        contentType="application/json",
-        accept="application/json"
+        ],
+        temperature=0.2,
+        max_tokens=200
     )
 
-    # ----------------------------
-    # 7. Parse response (Nova format)
-    # ----------------------------
-    response_body = json.loads(response["body"].read())
-
-    answer = response_body["output"]["message"]["content"][0]["text"]
+    answer = response.choices[0].message.content
 
     print("Answer generated")
 
     # ----------------------------
-    # 8. Return response
+    # 6. Response
     # ----------------------------
     return {
         "statusCode": 200,

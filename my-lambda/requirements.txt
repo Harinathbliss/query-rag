@@ -1,2 +1,3 @@
 qdrant-client>=1.7.0
 boto3>=1.28.57
+groq
