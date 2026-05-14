@@ -111,7 +111,7 @@ Context:
     # ----------------------------
     body = {
         "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 512,
+        "max_tokens": 200,
         "temperature": 0.2,
         "top_p": 0.9,
         "messages": [
@@ -126,7 +126,7 @@ Context:
     # 6. Invoke Bedrock (BIG MODEL)
     # ----------------------------
     response = bedrock_runtime.invoke_model(
-        modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+        modelId="us.anthropic.claude-3-haiku-20240307-v1:0",
         body=json.dumps(body),
         contentType="application/json",
         accept="application/json"
