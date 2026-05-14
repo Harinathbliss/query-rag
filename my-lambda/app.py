@@ -118,7 +118,7 @@ Context:
         "messages": [
             {
                 "role": "user",
-                "content": system_prompt
+                "content": "who is prime minister of india?"
             }
         ]
     }
