@@ -18,6 +18,7 @@ collection_name = "my_pdf_collection"
 # ----------------------------
 bedrock_runtime = boto3.client(
     service_name="bedrock-runtime",
+    region_name="us-west-2",
     config=Config(
         retries={
             "max_attempts": 2
