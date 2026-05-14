@@ -14,14 +14,15 @@ client = QdrantClient(
 collection_name = "my_pdf_collection"
 
 # ----------------------------
-# Bedrock client (safer retries)
+# Bedrock client
 # ----------------------------
 bedrock_runtime = boto3.client(
     service_name="bedrock-runtime",
     region_name="us-west-2",
     config=Config(
         retries={
-            "max_attempts": 2
+            "max_attempts": 5,
+            "mode": "adaptive"
         }
     )
 )
@@ -65,25 +66,24 @@ def lambda_handler(event, context):
     print("Embedding generated")
 
     # ----------------------------
-    # 2. Vector search (STRICT LIMIT)
+    # 2. Vector search (Qdrant)
     # ----------------------------
     results = client.query_points(
         collection_name=collection_name,
         query=query_vector,
-        limit=1   # IMPORTANT: keep small for big models
+        limit=3
     ).points
 
     # ----------------------------
-    # 3. Safe context builder (token-safe)
+    # 3. Build context safely
     # ----------------------------
-    MAX_CONTEXT_CHARS = 800
+    MAX_CONTEXT_CHARS = 1200
     search_results = ""
 
     for r in results:
         text = r.payload.get("text", "")
 
-        # aggressive trim
-        text = text[:250]
+        text = text[:300]
 
         if len(search_results) + len(text) > MAX_CONTEXT_CHARS:
             break
@@ -93,12 +93,14 @@ def lambda_handler(event, context):
     print("Context built")
 
     # ----------------------------
-    # 4. Prompt (clean RAG format)
+    # 4. RAG Prompt
     # ----------------------------
     system_prompt = f"""
 You are a helpful AI assistant.
 
-Answer ONLY using the context below.
+Answer ONLY using the provided context.
+
+If the answer is not in context, say "I don't know".
 
 User Query:
 {query}
@@ -108,23 +110,28 @@ Context:
 """
 
     # ----------------------------
-    # 5. BIG MODEL (Claude 3 Sonnet)
+    # 5. NOVA LITE REQUEST (CORRECT FORMAT)
     # ----------------------------
     body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 200,
-        "temperature": 0.2,
-        "top_p": 0.9,
+        "inferenceConfig": {
+            "max_new_tokens": 200,
+            "temperature": 0.2,
+            "top_p": 0.9
+        },
         "messages": [
             {
                 "role": "user",
-                "content": "who is prime minister of india?"
+                "content": [
+                    {
+                        "text": system_prompt
+                    }
+                ]
             }
         ]
     }
 
     # ----------------------------
-    # 6. Invoke Bedrock (BIG MODEL)
+    # 6. Invoke Bedrock (Nova)
     # ----------------------------
     response = bedrock_runtime.invoke_model(
         modelId="us.amazon.nova-2-lite-v1:0",
@@ -133,14 +140,17 @@ Context:
         accept="application/json"
     )
 
+    # ----------------------------
+    # 7. Parse response (Nova format)
+    # ----------------------------
     response_body = json.loads(response["body"].read())
 
-    answer = response_body["content"][0]["text"]
+    answer = response_body["output"]["message"]["content"][0]["text"]
 
     print("Answer generated")
 
     # ----------------------------
-    # 7. Response
+    # 8. Return response
     # ----------------------------
     return {
         "statusCode": 200,
