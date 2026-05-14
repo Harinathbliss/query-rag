@@ -1,4 +1,6 @@
 import json
+import boto3
+from botocore.config import Config
 from groq import Groq
 from qdrant_client import QdrantClient
 
@@ -13,7 +15,16 @@ client = QdrantClient(
 collection_name = "my_pdf_collection"
 
 # ----------------------------
-# Groq client
+# Bedrock (ONLY for embeddings)
+# ----------------------------
+bedrock = boto3.client(
+    service_name="bedrock-runtime",
+    region_name="us-west-2",
+    config=Config(retries={"max_attempts": 3})
+)
+
+# ----------------------------
+# Groq client (LLM)
 # ----------------------------
 groq_client = Groq(
     api_key="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"
@@ -37,19 +48,32 @@ def lambda_handler(event, context):
         }
 
     # ----------------------------
-    # 1. Embedding (KEEP YOUR CURRENT METHOD OR SWAP LATER)
+    # 1. EMBEDDING (IMPORTANT FIX)
     # ----------------------------
-    # If you still use Cohere elsewhere, plug it here.
-    # For now assume you already pass vector OR replace later.
+    embed_body = json.dumps({
+        "texts": [query],
+        "input_type": "search_query",
+        "truncate": "END"
+    })
 
-    raise_if_missing_embedding = False  # safety placeholder
+    embedding_response = bedrock.invoke_model(
+        modelId="cohere.embed-english-v3",
+        body=embed_body,
+        contentType="application/json",
+        accept="application/json"
+    )
+
+    embedding_json = json.loads(embedding_response["body"].read())
+    query_vector = embedding_json["embeddings"][0]
+
+    print("Embedding generated")
 
     # ----------------------------
-    # 2. Vector search (Qdrant)
+    # 2. QDRANT SEARCH (FIXED)
     # ----------------------------
     results = client.query_points(
         collection_name=collection_name,
-        query=query,  # IMPORTANT: replace with vector if needed
+        query=query_vector,   # ✅ MUST be vector
         limit=3
     ).points
 
@@ -87,7 +111,7 @@ Context:
 """
 
     # ----------------------------
-    # 5. GROQ LLM CALL
+    # 5. GROQ LLM
     # ----------------------------
     response = groq_client.chat.completions.create(
         model="llama3-70b-8192",
@@ -103,10 +127,8 @@ Context:
 
     answer = response.choices[0].message.content
 
-    print("Answer generated")
-
     # ----------------------------
-    # 6. Response
+    # 6. RESPONSE
     # ----------------------------
     return {
         "statusCode": 200,
