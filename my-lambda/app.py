@@ -7,7 +7,7 @@ from qdrant_client import QdrantClient
 # Qdrant setup
 # ----------------------------
 client = QdrantClient(
-    host="3.82.4.15",
+    host="54.81.245.161",
     port=6333
 )
 
