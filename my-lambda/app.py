@@ -3,12 +3,13 @@ import boto3
 from botocore.config import Config
 from groq import Groq
 from qdrant_client import QdrantClient
+import redis
 
 # ----------------------------
 # Qdrant setup
 # ----------------------------
 client = QdrantClient(
-    host="54.81.245.161",
+    host="54.157.35.63",
     port=6333
 )
 
@@ -38,8 +39,17 @@ def lambda_handler(event, context):
 
     request_body = json.loads(event.get("body") or "{}")
 
+    redis_client = redis.Redis(
+        host="tell-me-cache-sw3e3a.serverless.use1.cache.amazonaws.com",
+        port=6379,
+        decode_responses=True
+    )
+
+    session_id = request_body.get("sessionId")
     user_id = request_body.get("userId")
     query = request_body.get("query")
+    redis_key = f"chat:session:{session_id}:user{user_id}"
+    redis_client.xadd(redis_key,{"role":"User","Message":query})
 
     if not query:
         return {
@@ -126,6 +136,9 @@ Context:
     )
 
     answer = response.choices[0].message.content
+
+    redis_client.xadd(redis_key,{"role":"System","Message":answer})
+
 
     # ----------------------------
     # 6. RESPONSE
