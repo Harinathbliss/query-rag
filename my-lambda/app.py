@@ -45,12 +45,12 @@ def lambda_handler(event, context):
         port=6379,
         decode_responses=True
     )
-
+    print(f"Redis Connected {redis_client}")
     session_id = request_body.get("sessionId")
     user_id = request_body.get("userId")
     query = request_body.get("query")
     redis_key = f"chat:session:{session_id}:user{user_id}"
-    redis_client.xadd(redis_key,{"role":"User","Message":query})
+    #redis_client.xadd(redis_key,{"role":"User","Message":query})
 
     if not query:
         return {
@@ -138,7 +138,7 @@ Context:
 
     answer = response.choices[0].message.content
 
-    redis_client.xadd(redis_key,{"role":"System","Message":answer})
+    #redis_client.xadd(redis_key,{"role":"System","Message":answer})
 
 
     # ----------------------------
