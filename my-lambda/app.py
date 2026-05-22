@@ -9,7 +9,7 @@ import redis
 # Qdrant setup
 # ----------------------------
 client = QdrantClient(
-    host="34.228.247.241",
+    host="184.73.81.154",
     port=6333
 )
 
