@@ -10,7 +10,8 @@ import redis
 # ----------------------------
 client = QdrantClient(
     host="172.31.34.235",
-    port=6333
+    port=6333,
+    check_compatibility=False
 )
 
 collection_name = "my_pdf_collection"
